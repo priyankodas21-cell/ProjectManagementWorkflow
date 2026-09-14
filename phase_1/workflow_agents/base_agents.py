@@ -49,7 +49,7 @@ class AugmentedPromptAgent:
     def respond(self, input_text):
         """Generate a response using OpenAI API."""
         client = _get_openai_client(self.openai_api_key)
-        system_prompt = f"You are {self.persona}. Forget all previous context."
+        system_prompt = f"{self.persona}. Forget all previous context."
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -76,7 +76,7 @@ class KnowledgeAugmentedPromptAgent:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": f"You are {self.persona} knowledge-based assistant. Forget all previous context.\nUse only the following knowledge to answer, do not use your own knowledge: {self.knowledge}\nAnswer the prompt based on this knowledge, not your own."},
+                {"role": "system", "content": f"{self.persona} knowledge-based assistant. Forget all previous context.\nUse only the following knowledge to answer, do not use your own knowledge: {self.knowledge}\nAnswer the prompt based on this knowledge, not your own."},
                 {"role": "user", "content": input_text}
             ],
             temperature=0

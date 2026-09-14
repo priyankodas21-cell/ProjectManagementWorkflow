@@ -46,10 +46,9 @@ product_manager_knowledge_agent = KnowledgeAugmentedPromptAgent(
 )
 
 # Product Manager - Evaluation Agent
-persona_product_manager_eval = "You are an evaluation agent that checks the answers of other worker agents."
+persona_product_manager_eval = "You are an evaluation agent that checks the answers of other worker agents"
 evaluation_criteria_product_manager = (
-    "The answer should be user stories that follow the structure: "
-    "As a [type of user], I want [an action or feature] so that [benefit/value]."
+    "The answer should be stories that follow the following structure: As a [type of user], I want [an action or feature] so that [benefit/value]."
 )
 product_manager_evaluation_agent = EvaluationAgent(
     openai_api_key=openai_api_key,
@@ -117,15 +116,18 @@ development_engineer_evaluation_agent = EvaluationAgent(
 # Job function persona support functions
  
 def product_manager_support_function(query):
-    res = product_manager_evaluation_agent.evaluate(query)
+    knowledge_response = product_manager_knowledge_agent.respond(query)
+    res = product_manager_evaluation_agent.evaluate(knowledge_response)
     return res["final_response"] if isinstance(res, dict) else res
 
 def program_manager_support_function(query):
-    res = program_manager_evaluation_agent.evaluate(query)
+    knowledge_response = program_manager_knowledge_agent.respond(query)
+    res = program_manager_evaluation_agent.evaluate(knowledge_response)
     return res["final_response"] if isinstance(res, dict) else res
 
 def development_engineer_support_function(query):
-    res = development_engineer_evaluation_agent.evaluate(query)
+    knowledge_response = development_engineer_knowledge_agent.respond(query)
+    res = development_engineer_evaluation_agent.evaluate(knowledge_response)
     return res["final_response"] if isinstance(res, dict) else res
 
 # Routing Agent
