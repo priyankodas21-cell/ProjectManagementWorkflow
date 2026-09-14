@@ -158,30 +158,56 @@ routing_agent = RoutingAgent(
 # Run the workflow
 
 print("\n*** Workflow execution started ***\n")
-# Workflow Prompt
-# ****
-workflow_prompt = "What would the development tasks for this product be?"
-# ****
-print(f"Task to complete in this workflow, workflow prompt = {workflow_prompt}")
 
-print("\nDefining workflow steps from the workflow prompt")
+print("\nGenerating the Email Router development plan from the product specification")
 
-workflow_steps = action_planning_agent.generate_response(workflow_prompt)
-completed_steps = []
-for step in workflow_steps:
-    print(f"\nExecuting step: {step}")
-    result = routing_agent.route(step)
-    completed_steps.append(result)
-    print(f"Result of step: {result}")
+user_stories_prompt = (
+    "Create a complete set of user stories for the Email Router product. "
+    "Use the format: 'As a [type of user], I want [an action or feature] so that [benefit/value].' "
+    "Base the stories only on the specification below. "
+    "Cover key areas including email ingestion, message classification, knowledge retrieval, response generation, SME routing, monitoring, and admin configuration.\n\n"
+    f"Product Specification:\n{product_spec}"
+)
+user_stories = product_manager_knowledge_agent.respond(user_stories_prompt)
+print(f"\nUser Stories:\n{user_stories}")
 
-if completed_steps:
-    final_output = completed_steps[-1]
-    print(f"\nFinal output of the workflow: {final_output}")
-    
-    # Save output to a text file for easy viewing
-    output_filepath = os.path.join(os.path.dirname(__file__), "workflow_output.txt")
-    with open(output_filepath, "w", encoding="utf-8") as f:
-        f.write(str(final_output))
-    print(f"\nSaved final output to {output_filepath}")
+features_prompt = (
+    "Create a complete set of product features for the Email Router based on the specification and the user stories below. "
+    "Each feature must include these labels exactly and in order: Feature Name, Description, Key Functionality, User Benefit. "
+    "Do not write user stories or generic meeting tasks. Focus on actual product capabilities.\n\n"
+    f"Product Specification:\n{product_spec}\n\nUser Stories:\n{user_stories}"
+)
+product_features = program_manager_knowledge_agent.respond(features_prompt)
+print(f"\nProduct Features:\n{product_features}")
+
+tasks_prompt = (
+    "Create a complete set of engineering tasks for the Email Router based on the product specification, the user stories, and the product features below. "
+    "Each task must include every one of these labels exactly: Task ID, Task Title, Related User Story, Description, Acceptance Criteria, Estimated Effort, Dependencies. "
+    "Use realistic engineering work items for ingestion, classification, knowledge base retrieval, response generation, routing logic, dashboarding, and security.\n\n"
+    f"Product Specification:\n{product_spec}\n\nUser Stories:\n{user_stories}\n\nProduct Features:\n{product_features}"
+)
+engineering_tasks = development_engineer_knowledge_agent.respond(tasks_prompt)
+print(f"\nEngineering Tasks:\n{engineering_tasks}")
+
+final_output = (
+    "Email Router Development Plan\n"
+    "============================\n\n"
+    "User Stories\n"
+    "------------\n"
+    f"{user_stories}\n\n"
+    "Product Features\n"
+    "----------------\n"
+    f"{product_features}\n\n"
+    "Engineering Tasks\n"
+    "-----------------\n"
+    f"{engineering_tasks}"
+)
+
+print(f"\nFinal output of the workflow:\n{final_output}")
+
+output_filepath = os.path.join(os.path.dirname(__file__), "workflow_output.txt")
+with open(output_filepath, "w", encoding="utf-8") as f:
+    f.write(final_output)
+print(f"\nSaved final output to {output_filepath}")
 
 print("\n*** Workflow execution finished ***\n")
