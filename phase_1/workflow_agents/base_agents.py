@@ -76,7 +76,7 @@ class KnowledgeAugmentedPromptAgent:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": f"{self.persona} knowledge-based assistant. Forget all previous context.\nUse only the following knowledge to answer, do not use your own knowledge: {self.knowledge}\nAnswer the prompt based on this knowledge, not your own."},
+                {"role": "system", "content": f"{self.persona} knowledge-based assistant. Use the following knowledge and the task context supplied in the request. Do not rely on outside knowledge or invent product-specific facts; state when the supplied context is insufficient.\nKnowledge: {self.knowledge}"},
                 {"role": "user", "content": input_text}
             ],
             temperature=0
@@ -249,6 +249,7 @@ class EvaluationAgent:
 
             print(" Step 2: Evaluator agent judges the response")
             eval_prompt = (
+                f"Original task and supplied context:\n{initial_prompt}\n\n"
                 f"Does the following answer: {response_from_worker}\n"
                 f"Meet this criteria: {self.evaluation_criteria}\n"
                 f"Respond Yes or No, and the reason why it does or doesn't meet the criteria."
@@ -316,8 +317,8 @@ class RoutingAgent():
         return embedding 
 
     # TODO: 3 - Define a method to route user prompts to the appropriate agent
-    def route_prompt(self, user_input):
-        input_emb = self.get_embedding(user_input)
+    def route_prompt(self, user_input, routing_input=None):
+        input_emb = self.get_embedding(routing_input or user_input)
         best_agent = None
         best_score = -1
 

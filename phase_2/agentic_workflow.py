@@ -20,14 +20,11 @@ with open("Product-Spec-Email-Router.txt", "r") as f:
 
 # Action Planning Agent
 knowledge_action_planning = (
-    "Stories are defined from a product spec by identifying a "
-    "persona, an action, and a desired outcome for each story. "
-    "Each story represents a specific functionality of the product "
-    "described in the specification. \n"
-    "Features are defined by grouping related user stories. \n"
-    "Tasks are defined for each story and represent the engineering "
-    "work required to develop the product. \n"
-    "A development Plan for a product contains all these components"
+    "Return exactly three steps, one per line and in this order: "
+    "Product Manager creates user stories from the product specification; "
+    "Program Manager groups those user stories into product features; "
+    "Development Engineer creates engineering tasks from the product specification, "
+    "user stories, and features. Each step must name its role and artifact."
 )
 action_planning_agent = ActionPlanningAgent(openai_api_key=openai_api_key, knowledge=knowledge_action_planning)
 
@@ -135,17 +132,17 @@ def development_engineer_support_function(query):
 routes = [
     {
         "name": "Product Manager",
-        "description": "Handles product-related queries and tasks.",
+        "description": "Creates user stories from a product specification, using user personas, actions, and benefits. Does not group stories into features or create engineering tasks.",
         "func": product_manager_support_function
     },
     {
         "name": "Program Manager",
-        "description": "Handles program management-related queries and tasks.",
+        "description": "Groups supplied user stories into product features, each with a feature name, description, key functionality, and user benefit. Does not create user stories or engineering tasks.",
         "func": program_manager_support_function
     },
     {
         "name": "Development Engineer",
-        "description": "Handles development-related queries and tasks.",
+        "description": "Creates engineering implementation tasks from the product specification, user stories, and features, including acceptance criteria, effort estimates, and dependencies. Does not create user stories or group features.",
         "func": development_engineer_support_function
     }
 ]
@@ -162,7 +159,14 @@ print("\n*** Workflow execution started ***\n")
 
 print("\nGenerating the Email Router development plan from the product specification")
 
-workflow_prompt = "What would the development tasks for this product be?\n\n" + product_spec
+workflow_prompt = (
+    "Create exactly three ordered workflow steps for a complete product development plan. "
+    "Return one step per line: first, Product Manager creates user stories; second, "
+    "Program Manager creates product features from those stories; third, Development "
+    "Engineer creates engineering tasks from the product specification, stories, and features. "
+    "Do not make one step per product requirement.\n\n"
+    f"Product specification:\n{product_spec}"
+)
 workflow_steps = action_planning_agent.extract_steps_from_prompt(workflow_prompt)
 completed_steps = []
 
@@ -180,7 +184,7 @@ for step_number, step in enumerate(workflow_steps, start=1):
         )
         routed_query += f"\n\nValidated results from prior steps:\n{prior_results}"
 
-    step_result = routing_agent.route(routed_query)
+    step_result = routing_agent.route(routed_query, routing_input=step)
     completed_steps.append({"step": step, "result": step_result})
     print(f"\nResult for step {step_number}:\n{step_result}")
 
