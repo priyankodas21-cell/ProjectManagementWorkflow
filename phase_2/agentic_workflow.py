@@ -58,7 +58,9 @@ product_manager_evaluation_agent = EvaluationAgent(
 )
 # Program Manager - Knowledge Augmented Prompt Agent
 persona_program_manager = "You are a Program Manager, you are responsible for defining the features for a product."
-knowledge_program_manager = "Features of a product are defined by organizing similar user stories into cohesive groups."
+knowledge_program_manager = (
+    "Features of a product are defined by organizing similar user stories into cohesive groups."
+)
 program_manager_knowledge_agent = KnowledgeAugmentedPromptAgent(
     openai_api_key=openai_api_key,
     persona=persona_program_manager,
@@ -85,7 +87,9 @@ program_manager_evaluation_agent = EvaluationAgent(
 
 # Development Engineer - Knowledge Augmented Prompt Agent
 persona_dev_engineer = "You are a Development Engineer, you are responsible for defining the development tasks for a product."
-knowledge_dev_engineer = "Development tasks are defined by identifying what needs to be built to implement each user story."
+knowledge_dev_engineer = (
+    "Development tasks are defined by identifying what needs to be built to implement each user story."
+)
 development_engineer_knowledge_agent = KnowledgeAugmentedPromptAgent(
     openai_api_key=openai_api_key,
     persona=persona_dev_engineer,
@@ -116,18 +120,15 @@ development_engineer_evaluation_agent = EvaluationAgent(
 # Job function persona support functions
  
 def product_manager_support_function(query):
-    knowledge_response = product_manager_knowledge_agent.respond(query)
-    res = product_manager_evaluation_agent.evaluate(knowledge_response)
+    res = product_manager_evaluation_agent.evaluate(query)
     return res["final_response"] if isinstance(res, dict) else res
 
 def program_manager_support_function(query):
-    knowledge_response = program_manager_knowledge_agent.respond(query)
-    res = program_manager_evaluation_agent.evaluate(knowledge_response)
+    res = program_manager_evaluation_agent.evaluate(query)
     return res["final_response"] if isinstance(res, dict) else res
 
 def development_engineer_support_function(query):
-    knowledge_response = development_engineer_knowledge_agent.respond(query)
-    res = development_engineer_evaluation_agent.evaluate(knowledge_response)
+    res = development_engineer_evaluation_agent.evaluate(query)
     return res["final_response"] if isinstance(res, dict) else res
 
 # Routing Agent
@@ -155,52 +156,37 @@ routing_agent = RoutingAgent(
     agents=routes
 )
 
-# Run the workflow
+# Run the planned and routed workflow
 
 print("\n*** Workflow execution started ***\n")
 
 print("\nGenerating the Email Router development plan from the product specification")
 
-user_stories_prompt = (
-    "Create a complete set of user stories for the Email Router product. "
-    "Use the format: 'As a [type of user], I want [an action or feature] so that [benefit/value].' "
-    "Base the stories only on the specification below. "
-    "Cover key areas including email ingestion, message classification, knowledge retrieval, response generation, SME routing, monitoring, and admin configuration.\n\n"
-    f"Product Specification:\n{product_spec}"
-)
-user_stories = product_manager_knowledge_agent.respond(user_stories_prompt)
-print(f"\nUser Stories:\n{user_stories}")
+workflow_prompt = "What would the development tasks for this product be?\n\n" + product_spec
+workflow_steps = action_planning_agent.extract_steps_from_prompt(workflow_prompt)
+completed_steps = []
 
-features_prompt = (
-    "Create a complete set of product features for the Email Router based on the specification and the user stories below. "
-    "Each feature must include these labels exactly and in order: Feature Name, Description, Key Functionality, User Benefit. "
-    "Do not write user stories or generic meeting tasks. Focus on actual product capabilities.\n\n"
-    f"Product Specification:\n{product_spec}\n\nUser Stories:\n{user_stories}"
-)
-product_features = program_manager_knowledge_agent.respond(features_prompt)
-print(f"\nProduct Features:\n{product_features}")
+for step_number, step in enumerate(workflow_steps, start=1):
+    print(f"\n--- Workflow step {step_number}: {step} ---")
 
-tasks_prompt = (
-    "Create a complete set of engineering tasks for the Email Router based on the product specification, the user stories, and the product features below. "
-    "Each task must include every one of these labels exactly: Task ID, Task Title, Related User Story, Description, Acceptance Criteria, Estimated Effort, Dependencies. "
-    "Use realistic engineering work items for ingestion, classification, knowledge base retrieval, response generation, routing logic, dashboarding, and security.\n\n"
-    f"Product Specification:\n{product_spec}\n\nUser Stories:\n{user_stories}\n\nProduct Features:\n{product_features}"
-)
-engineering_tasks = development_engineer_knowledge_agent.respond(tasks_prompt)
-print(f"\nEngineering Tasks:\n{engineering_tasks}")
+    routed_query = (
+        f"Current workflow step: {step}\n\n"
+        f"Product Specification:\n{product_spec}"
+    )
+    if completed_steps:
+        prior_results = "\n\n".join(
+            f"{completed_step['step']}\n{completed_step['result']}"
+            for completed_step in completed_steps
+        )
+        routed_query += f"\n\nValidated results from prior steps:\n{prior_results}"
 
-final_output = (
-    "Email Router Development Plan\n"
-    "============================\n\n"
-    "User Stories\n"
-    "------------\n"
-    f"{user_stories}\n\n"
-    "Product Features\n"
-    "----------------\n"
-    f"{product_features}\n\n"
-    "Engineering Tasks\n"
-    "-----------------\n"
-    f"{engineering_tasks}"
+    step_result = routing_agent.route(routed_query)
+    completed_steps.append({"step": step, "result": step_result})
+    print(f"\nResult for step {step_number}:\n{step_result}")
+
+final_output = "Email Router Development Plan\n============================\n\n" + "\n\n".join(
+    f"{item['step']}\n{'-' * len(item['step'])}\n{item['result']}"
+    for item in completed_steps
 )
 
 print(f"\nFinal output of the workflow:\n{final_output}")
