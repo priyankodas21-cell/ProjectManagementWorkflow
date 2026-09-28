@@ -235,54 +235,67 @@ class EvaluationAgent:
         self.worker_agent = worker_agent
         self.max_interactions = max_interactions
 
-    def evaluate(self, initial_prompt):
+    def evaluate(self, initial_prompt, validator=None, normalizer=None):
         # This method manages interactions between agents to achieve a solution.
         client = _get_openai_client(self.openai_api_key)
         prompt_to_evaluate = initial_prompt
+        accepted = False
 
         for i in range(self.max_interactions):  
             print(f"\n--- Interaction {i+1} ---")
             print(" Step 1: Worker agent generates a response to the prompt")
             print(f"Prompt:\n{prompt_to_evaluate}")
             response_from_worker = self.worker_agent.respond(prompt_to_evaluate)
+            if normalizer:
+                response_from_worker = normalizer(response_from_worker)
             print(f"Worker Agent Response:\n{response_from_worker}")
 
-            print(" Step 2: Evaluator agent judges the response")
-            eval_prompt = (
-                f"Original task and supplied context:\n{initial_prompt}\n\n"
-                f"Does the following answer: {response_from_worker}\n"
-                f"Meet this criteria: {self.evaluation_criteria}\n"
-                f"Respond Yes or No, and the reason why it does or doesn't meet the criteria."
-            )
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": f"You are {self.persona}, an evaluator agent. Forget previous context."},
-                    {"role": "user", "content": eval_prompt}
-                ],
-                temperature=0
-            )
-            evaluation = response.choices[0].message.content.strip()
-            print(f"Evaluator Agent Evaluation:\n{evaluation}")
-
-            print(" Step 3: Check if evaluation is positive")
-            if evaluation.lower().startswith("yes"):
-                print("✅ Final solution accepted.")
-                break
+            print(" Step 2: Validate and evaluate the response")
+            validation_error = validator(response_from_worker) if validator else None
+            if validation_error:
+                evaluation = f"No: deterministic validation failed. {validation_error}"
+            elif validator:
+                evaluation = "Yes: deterministic validation passed."
             else:
-                print(" Step 4: Generate instructions to correct the response")
-                instruction_prompt = (
-                    f"Provide instructions to fix an answer based on these reasons why it is incorrect: {evaluation}"
+                eval_prompt = (
+                    f"Original task and supplied context:\n{initial_prompt}\n\n"
+                    f"Does the following answer: {response_from_worker}\n"
+                    f"Meet this criteria: {self.evaluation_criteria}\n"
+                    f"Respond Yes or No, and the reason why it does or doesn't meet the criteria."
                 )
                 response = client.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[
                         {"role": "system", "content": f"You are {self.persona}, an evaluator agent. Forget previous context."},
-                        {"role": "user", "content": instruction_prompt}
+                        {"role": "user", "content": eval_prompt}
                     ],
                     temperature=0
                 )
-                instructions = response.choices[0].message.content.strip()
+                evaluation = response.choices[0].message.content.strip()
+            print(f"Evaluator Agent Evaluation:\n{evaluation}")
+
+            print(" Step 3: Check if evaluation is positive")
+            if evaluation.lower().startswith("yes"):
+                print("✅ Final solution accepted.")
+                accepted = True
+                break
+            else:
+                print(" Step 4: Prepare corrections")
+                if validation_error:
+                    instructions = validation_error
+                else:
+                    instruction_prompt = (
+                        f"Provide concise, specific corrections for this failed answer: {evaluation}"
+                    )
+                    response = client.chat.completions.create(
+                        model="gpt-3.5-turbo",
+                        messages=[
+                            {"role": "system", "content": f"You are {self.persona}, an evaluator agent. Forget previous context."},
+                            {"role": "user", "content": instruction_prompt}
+                        ],
+                        temperature=0
+                    )
+                    instructions = response.choices[0].message.content.strip()
                 print(f"Instructions to fix:\n{instructions}")
 
                 print(" Step 5: Send feedback to worker agent for refinement")
@@ -290,12 +303,15 @@ class EvaluationAgent:
                     f"The original prompt was: {initial_prompt}\n"
                     f"The response to that prompt was: {response_from_worker}\n"
                     f"It has been evaluated as incorrect.\n"
+                    f"Now produce the complete corrected answer to the original prompt. "
+                    f"Do not return advice, instructions, or an explanation of the corrections. "
                     f"Make only these corrections, do not alter content validity: {instructions}"
                 )
         return {
                 "final_response": response_from_worker,
                 "evaluation": evaluation,
-                "iterations": i + 1
+                "iterations": i + 1,
+                "accepted": accepted
         }   
 
 
@@ -318,6 +334,15 @@ class RoutingAgent():
 
     # TODO: 3 - Define a method to route user prompts to the appropriate agent
     def route_prompt(self, user_input, routing_input=None):
+        if routing_input:
+            planned_role = next(
+                (agent for agent in self.agents if agent["name"].casefold() in routing_input.casefold()),
+                None
+            )
+            if planned_role is not None:
+                print(f"[Router] Following planned role: {planned_role['name']}")
+                return planned_role["func"](user_input)
+
         input_emb = self.get_embedding(routing_input or user_input)
         best_agent = None
         best_score = -1
