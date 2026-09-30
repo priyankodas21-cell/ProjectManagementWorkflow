@@ -332,7 +332,6 @@ class RoutingAgent():
         embedding = response.data[0].embedding
         return embedding 
 
-    # TODO: 3 - Define a method to route user prompts to the appropriate agent
     def route_prompt(self, user_input, routing_input=None):
         if routing_input:
             planned_role = next(

@@ -17,5 +17,4 @@ augmented_agent_response = augmented_agent.respond(prompt)
 # Print the agent's response
 print(augmented_agent_response)
 
-# The agent likely used its internal knowledge and the OpenAI API to answer the prompt.
 # The system prompt specifying the persona influenced the agent to respond in the style of a college professor, starting with "Dear students,".

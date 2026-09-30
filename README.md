@@ -156,7 +156,6 @@ The workflow is built in `phase_2/agentic_workflow.py` and uses the agent classe
 
 ### Workflow Implementation Steps
 
-Follow the TODO comments in `agentic_workflow.py` and complete the workflow in the following order:
 
 1. Import `ActionPlanningAgent`, `KnowledgeAugmentedPromptAgent`, `EvaluationAgent`, and `RoutingAgent`
 2. Load the OpenAI API key from environment variables

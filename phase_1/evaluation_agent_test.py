@@ -1,4 +1,3 @@
-# TODO: 1 - Import EvaluationAgent and KnowledgeAugmentedPromptAgent classes
 from workflow_agents.base_agents import EvaluationAgent, KnowledgeAugmentedPromptAgent
 
 import os

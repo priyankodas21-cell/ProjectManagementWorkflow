@@ -106,7 +106,7 @@ knowledge_dev_engineer = (
     "Include modest, testable work for the stated performance, reliability, security/privacy, and scalability requirements. For scalability, limit the plan to a basic test against the specified email-volume targets; do not add production infrastructure or extensive capacity-planning work. "
     "Use the supplied product specification and prior workflow results. Do not invent requirements."
 )
-# Production follow-up: perform sustained load/soak testing, capacity planning, and autoscaling validation before production deployment.
+
 development_engineer_knowledge_agent = KnowledgeAugmentedPromptAgent(
     openai_api_key=openai_api_key,
     persona=persona_dev_engineer,
